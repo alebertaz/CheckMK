@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+# SMS using Skebby.it via REST API
+# Author: @abertazz
+
+import os
+import sys
+import requests
+import json
+
+sms_max_len = 160
+
+# For testing purposes
+#os.environ['NOTIFY_CONTACTPAGER']='348XXXXXXX'
+#os.environ['NOTIFY_HOSTNAME']='TEST-HOST'
+#os.environ['NOTIFY_SERVICESTATE']='CRIT'
+#os.environ['NOTIFY_WHAT']='tera-be-test-TEST'
+#os.environ['NOTIFY_SERVICEDESC']='Error'
+#os.environ['NOTIFY_SERVICEOUTPUT']='Error'
+#os.environ['NOTIFY_HOSTSTATE']='CRIT'
+#os.environ['NOTIFY_PARAMETER_1']='(username content)'
+#os.environ['NOTIFY_PARAMETER_2']='(password content)'
+
+# "GP" for Classic+, "TI" for Classic, "SI" for Basic)
+# See: https://developers.skebby.it/#send-an-sms-message
+sms_method = "TI"
+
+def SkebbySessionStart(username, password):
+    url_login = "https://api.skebby.it/API/v1.0/REST/login"
+    url_status = "https://api.skebby.it/API/v1.0/REST/status"
+
+    payload_login = {
+        'username': username,
+        'password': password
+    }
+    response_login = requests.get(url_login, params=payload_login)
+    session = response_login.text
+    return session
+
+def skebbyGatewaySendSMSRestAPI(username, password, rcptlist, message, method):
+    url = "https://api.skebby.it/API/v1.0/REST/sms"
+    session = SkebbySessionStart(username, password)
+    data = {
+        "message_type": method,
+        "message": message,
+        "recipient": rcptlist
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "user_key": session.split(";")[0],
+        "Session_key": session.split(";")[1]
+    }
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    response.raise_for_status()
+
+    return response.text
+
+def cmk_sendsms():
+    # VALIDATE SMS RECIPIENT (PAGER ADDRESS)
+    if 'NOTIFY_CONTACTPAGER' not in os.environ:
+        sys.stderr.write('Error: No contact pager / telephone number for the contact!\n')
+        sys.exit(1)
+
+    recipients = os.environ.get('NOTIFY_CONTACTPAGER')
+
+    # VALIDATE USERNAME/PASSWORD
+    if 'NOTIFY_PARAMETER_1' not in os.environ or 'NOTIFY_PARAMETER_2' not in os.environ:
+        sys.stderr.write('Error: No username or no password entered!\n')
+        sys.exit(1)
+
+    username = os.environ.get('NOTIFY_PARAMETER_1')
+    password = os.environ.get('NOTIFY_PARAMETER_2')
+
+    # PREPARE MESSAGE
+    message = os.environ.get('NOTIFY_HOSTNAME') + " "
+    if os.environ.get('NOTIFY_WHAT') == 'SERVICE':
+        message += os.environ.get('NOTIFY_SERVICESTATE', '')[:2] + " "
+        avail_len = sms_max_len - len(message)
+        message += os.environ.get('NOTIFY_SERVICEDESC')[:avail_len] + " "
+        avail_len = sms_max_len - len(message)
+        message += os.environ.get('NOTIFY_SERVICEOUTPUT')[:avail_len]
+    else:
+        message += "is " + os.environ.get('NOTIFY_HOSTSTATE')
+
+    # PREPARE RECIPIENT LIST
+    rcptlist = recipients.split(',')
+
+    # SEND SMS
+    result = skebbyGatewaySendSMSRestAPI(username, password, rcptlist, message, sms_method)
+
+     # VALIDATE RESULT
+    json_object = json.loads(result)
+    if "result" in json_object and json_object["result"] == "OK":
+        print("SMS sent!")
+    else:
+        print("SMS NOT sent!! Debug informations:")
+        print(result)
+        sys.exit(1)
+
+if __name__ == '__main__':
+    print("Sending SMS...")
+    cmk_sendsms()
