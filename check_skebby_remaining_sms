@@ -12,7 +12,6 @@ SESSION=$(curl --silent -XGET "https://api.skebby.it/API/v1.0/REST/login?usernam
 USER_KEY=$(echo $SESSION | cut -d ";" -f 1)
 SESSION_KEY=$(echo $SESSION | cut -d ";" -f 2)
 
-
 RESULT=$(curl --silent -XGET 'https://api.skebby.it/API/v1.0/REST/status' -H 'Content-Type: application/json' -H 'user_key: '$USER_KEY'' -H 'Session_key: '$SESSION_KEY'')
 RESULT=$(echo $RESULT | jq '.sms[] | select(.type=="TI").quantity')
 
