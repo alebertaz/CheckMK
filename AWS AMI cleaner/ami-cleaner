@@ -1,0 +1,50 @@
+#!/bin/bash
+
+USER=$(whoami)
+
+if id -nG "$USER" | grep -qw "sudo"; then :
+else
+    echo "Please execute this script with a sudoer user and different from root user."
+    exit 1
+fi
+
+echo "INFO: This script deletes oldest AMI (based on AMI creation date) maintaining the number of AMIs indicated in the retention given as input."
+
+while [ -z $amiName ]; do
+    echo "Please enter AMI name of the AWS EC2 VM. Example: rmpro-RI-generic"
+    read amiName
+done
+
+amiName=$amiName"*"
+
+minimumRetention=6
+AMIs=($(sudo -H -u remotepro-init-env aws ec2 describe-images --region eu-west-1 --filters "Name=name,Values=$amiName" --query 'Images[*].[CreationDate,ImageId]' --output text | sort -r -k 5 >
+count=${#AMIs[@]}
+if [ "$count" -le "$minimumRetention" ]; then
+    echo -e "Error! VM name not found or we already have less (or equal) than $minimumRetention AMIs for $amiName\n"
+    exit 1
+fi
+echo "Number of AMIs before retention for \"$amiName\": $count"
+
+while [ -z $retention ]; do
+    echo "Please enter retention (number must the >= 6)"
+    read retention
+done
+if [ $retention -gt $minimumRetention ]; then
+ AMIs=(${AMIs[@]:$((retention)):$((count))})
+ if [ ${#AMIs[@]} -eq 0 ]; then
+    echo "Error! No AMIs to delete!"
+    exit 1
+ fi
+ echo "Applaying retention for: ${AMIs[@]}..."
+ sudo -H -u remotepro-init-env amicleaner --from-ids ${AMIs[@]}
+ echo "Wait some seconds to count the remaining AMIs..."
+ sleep 3
+ AMIs=($(sudo -H -u remotepro-init-env aws ec2 describe-images --region eu-west-1 --filters "Name=name,Values=$amiName" --query 'Images[*].[CreationDate,ImageId]' --output text | sort -r -k 5>
+ count=${#AMIs[@]}
+ echo "Number of AMIs after retention for \"$amiName\": $count"
+ echo "Done!"
+else
+ echo "Error! Retention must be >= $minimumRetention"
+ exit 1
+fi

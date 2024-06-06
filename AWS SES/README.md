@@ -1,0 +1,1 @@
+This script, designed for CheckMK, check the daily e-mail accounts in AWS SES suppression list. It sends a mail in case of one ore more daily detection.
