@@ -1,0 +1,32 @@
+#!/bin/bash
+
+MAILFROM="Source mail <sourcemail@sourcemail.it>"
+MAILTO="destination@destinationmail.it"
+
+#START_DATE=$(date -d '07/28/2022 00:00:00' "+%s")
+START_DATE=$(date -d 'yesterday 00:00:00' "+%s")
+END_DATE=$(date -d 'yesterday 23:59:59' "+%s")
+REGION=$1
+
+STRING_DATE=$(date +'%d/%m/%Y' -d @$END_DATE)
+
+DETECTED_NEW_MAILS=$(aws sesv2 list-suppressed-destinations --region $1 --start-date $START_DATE --end-date $END_DATE --query '(SuppressedDestinationSummaries[*].EmailAddress)' | tr -d '\n' | tr -s ' ')
+DETECTED_NEW_MAILS_NUMBER=$(echo -n $DETECTED_NEW_MAILS | awk -F "@" '{print NF-1}')
+if [ -z $DETECTED_NEW_MAILS_NUMBER ]; then
+ #API CALL ERROR - RETURN CRITICAL
+ exit 2
+fi
+if [ $DETECTED_NEW_MAILS_NUMBER -ne 0 ]; then
+ MAILSUBJ="tERA SES Suppression List region \"$1\" - check day $STRING_DATE - Found $DETECTED_NEW_MAILS_NUMBER new e-mail address(es) !"
+ MAIL_BODY="Found $DETECTED_NEW_MAILS_NUMBER new entry(ies) in suppression list for the region \"$1\" the day $STRING_DATE: $DETECTED_NEW_MAILS."
+else
+ MAILSUBJ="tERA SES Suppression List region \"$1\" - check day $STRING_DATE - No entries found in the suppression list."
+ MAIL_BODY="No entries found in the suppression list in the last day ($STRING_DATE) for the region \"$1\"."
+fi
+#Just for output (not included in OMD output since it's an mk-job):
+echo $MAIL_BODY
+
+#SEND MAIL
+echo -e "$MAIL_BODY" | env MAILRC=/dev/null smtp=localhost mailx -a "FROM:$MAILFROM" -n -s "$MAILSUBJ" "$MAILTO"
+
+exit 0
