@@ -1,0 +1,32 @@
+{'author': 'Alessandro Bertazzo',
+ 'description': 'Special Agent (Datasource) for Amazon RDS Postgres.\n'
+                '\n'
+                'This plugin does the same as the locally-run mk_postgres '
+                'plugin,\n'
+                'but for a remote Postgres DB on Amazon RDS, properly skipping '
+                'the\n'
+                'reserved database rdsadmin.\n'
+                '\n'
+                'Please note that you will need the RDS master user for this '
+                'plugin to work properly.',
+ 'download_url': 'https://github.com/alebertaz/CheckMK',
+ 'files': {'agent_based': [],
+           'agents': ['special/agent_rdspostgres'],
+           'alert_handlers': [],
+           'bin': [],
+           'checkman': [],
+           'checks': ['agent_rdspostgres'],
+           'doc': [],
+           'inventory': [],
+           'lib': [],
+           'locales': [],
+           'mibs': [],
+           'notifications': [],
+           'pnp-templates': [],
+           'web': ['plugins/wato/datasource_rdspostgres.py']},
+ 'name': 'datasource_rdspostgres',
+ 'title': 'Special Agent for Postgres RDS',
+ 'version': '3.0.0',
+ 'version.min_required': '2.2.0p1',
+ 'version.packaged': '2.2.0p34',
+ 'version.usable_until': None}
