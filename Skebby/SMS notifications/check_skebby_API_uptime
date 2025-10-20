@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+import sys
+from datetime import datetime
+
+# --- PARAMETRI ---
+if len(sys.argv) != 2:
+    print("Missing parameter: activation_date (YYYY-MM-DD)")
+    sys.exit(2)
+
+activation_date_str = sys.argv[1]
+
+try:
+    activation_date = datetime.strptime(activation_date_str, "%Y-%m-%d")
+except ValueError:
+    printt("Invalid date format (use YYYY-MM-DD)")
+    sys.exit(2)
+
+today = datetime.now()
+days_active = (today - activation_date).days
+months_active = days_active / 30.44  # media approssimata
+
+# --- SOGLIE ---
+warn_threshold = 5     # mesi
+crit_threshold = 6     # mesi
+
+if months_active < warn_threshold:
+    state = 0
+    status = "OK"
+    message = ""
+elif months_active < crit_threshold:
+    state = 1
+    status = "WARNING"
+    message = " - Please prepare to renew Skebby API password."
+else:
+    state = 2
+    status = "CRITICAL"
+    message = " - Please renew Skebby API password, it's expired !!! "
+
+print(f"API password (6 months duration) active for {months_active:.1f} months since {activation_date_str}{message}")
+
+sys.exit(state)
