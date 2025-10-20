@@ -30,4 +30,3 @@ echo $MAIL_BODY
 echo -e "$MAIL_BODY" | env MAILRC=/dev/null smtp=localhost mailx -a "FROM:$MAILFROM" -n -s "$MAILSUBJ" "$MAILTO"
 
 exit 0
-echo "test"
